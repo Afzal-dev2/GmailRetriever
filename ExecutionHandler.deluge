@@ -1,0 +1,83 @@
+
+/* Using /gmail command followed by no arguments will display recent 10 emails.
+Use /gmail along with search phrases such as keyword, date will show mails corressponding to them.
+*/
+//Passing arguments to api
+params = Map();
+params.put("maxResults",10);
+params.put("q",arguments);
+//invoking the api
+response = invokeurl
+[
+	url :"https://gmail.googleapis.com/gmail/v1/users/me/messages"
+	type :GET
+	parameters:params
+	connection:"gmailbridge"
+];
+//if response is null, display error msg
+if(response.get("responseCode") == 204)
+{
+	responsecard = Map();
+	responsecard.put("text","Please check your query and try again!!");
+	cards = Map();
+	cards.put("title","Gmail Client");
+	responsecard.put("card",cards);
+	return responsecard;
+}
+//info response;
+//get the messages
+data = response.getJSON("messages");
+//convert to json list
+jsonlist = data.toJSONList();
+idList = List();
+slidesArray = List();
+//get id attributes and add them to an array
+for each  id in jsonlist
+{
+	idList.add(id.getJSON("id"));
+}
+info idList;
+i = 0;
+for each  id in idList
+{
+	i = i + 1;
+	//get each individual mail
+	response_msg = invokeurl
+	[
+		url :"https://gmail.googleapis.com/gmail/v1/users/me/messages/" + id
+		type :GET
+		connection:"gmailbridge"
+	];
+	//get snippet of each mail
+	snippt = response_msg.get("snippet");
+	//add them to slidesArray for card view
+	slidesArray.add({"type":"text","title":"No." + i,"buttons":{{"label":"Full msg","hint":"","action":{"type":"open.url","data":{"web":"https://mail.google.com/mail/u/me/#all/" + id}}}},"data":snippt});
+}
+//layout for card view
+response = Map();
+response.put("text","Here are your mails");
+bot = Map();
+bot.put("name","Gmail Client");
+response.put("bot",bot);
+card = Map();
+card.put("theme","modern-inline");
+response.put("card",card);
+slidesList = list();
+slidesList0 = Map();
+slidesList0.put("type","text");
+slidesList0.put("title","No.");
+buttonsList = list();
+buttonsList0 = Map();
+buttonsList0.put("label","View in full");
+action = Map();
+action.put("type","open.url");
+data = Map();
+data.put("web","https://cliq.zoho.com");
+action.put("data",data);
+buttonsList0.put("action",action);
+buttonsList.add(buttonsList0);
+slidesList0.put("buttons",buttonsList);
+slidesList0.put("data","Msg body");
+slidesList.add(slidesList0);
+response.put("slides",slidesArray);
+return response;
